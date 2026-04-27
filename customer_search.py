@@ -17,7 +17,7 @@ def get_sheet():
     )
     client = gspread.authorize(creds)
     # 請確保試算表名稱正確
-    return client.open("客戶名單雲端版").sheet1
+    return client.open("customer_list_cloud").sheet1
 
 # --- 資料讀取 (加快取) ---
 @st.cache_data(ttl=600)
