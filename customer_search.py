@@ -51,12 +51,31 @@ if selected_area != "全部":
 
 # --- 搜尋邏輯 ---
 query = st.text_input("搜尋客戶 (代號/簡稱/全稱)：", placeholder="輸入關鍵字")
-results = temp_df
+
+# 這裡我們先初始化 display_results，確保它一定有值
+display_results = temp_df 
+
 if query:
-    mask = (results['客戶簡稱'].astype(str).str.contains(query, case=False) | 
-            results['客戶全稱'].astype(str).str.contains(query, case=False) | 
-            results['客戶代號'].astype(str).str.contains(query, case=False))
-    results = results[mask]
+    mask = (temp_df['客戶簡稱'].astype(str).str.contains(query, case=False) | 
+            temp_df['客戶全稱'].astype(str).str.contains(query, case=False) | 
+            temp_df['客戶代號'].astype(str).str.contains(query, case=False))
+    display_results = temp_df[mask]
+
+# 限制顯示數量 (這樣做保證變數不會因為篩選過多而導致後續錯誤)
+display_results = display_results.head(50)
+
+# --- 顯示與維護 ---
+if not display_results.empty:
+    st.write(f"找到 {len(display_results)} 筆資料")
+    
+    for idx, row in display_results.iterrows():
+        # (這裡接續你原本的 expander 顯示邏輯...)
+        title = f"🏢 [{row.get('轄區', '')}] {row.get('客戶簡稱', '無')} ({row.get('客戶代號', '')})"
+        with st.expander(title):
+            # ...你的各欄位顯示區塊
+            pass 
+else:
+    st.info("查無資料，請嘗試其他搜尋條件。")
 
 # --- 顯示與維護 ---
     for idx, row in display_results.iterrows():
