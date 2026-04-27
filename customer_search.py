@@ -58,7 +58,7 @@ if query:
 else:
     results = temp_df
 
-# --- 顯示與維護 ---
+ --- 顯示與維護 ---
 if not results.empty:
     st.write(f"找到 {len(results)} 筆相符資料 (僅顯示前 50 筆)")
     display_results = results.head(50)
