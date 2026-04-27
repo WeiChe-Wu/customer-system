@@ -52,38 +52,26 @@ if selected_area != "全部":
 # --- 搜尋邏輯 ---
 query = st.text_input("搜尋客戶 (代號/簡稱/全稱)：", placeholder="輸入關鍵字")
 
-# 這裡我們先初始化 display_results，確保它一定有值
-display_results = temp_df 
+# 初始化搜尋結果
+search_results = temp_df 
 
 if query:
     mask = (temp_df['客戶簡稱'].astype(str).str.contains(query, case=False) | 
             temp_df['客戶全稱'].astype(str).str.contains(query, case=False) | 
             temp_df['客戶代號'].astype(str).str.contains(query, case=False))
-    display_results = temp_df[mask]
+    search_results = temp_df[mask]
 
-# 限制顯示數量 (這樣做保證變數不會因為篩選過多而導致後續錯誤)
-display_results = display_results.head(50)
+# 限制顯示數量，避免手機當機
+display_results = search_results.head(50)
 
 # --- 顯示與維護 ---
 if not display_results.empty:
-    st.write(f"找到 {len(display_results)} 筆資料")
+    st.write(f"找到 {len(display_results)} 筆相符資料")
     
     for idx, row in display_results.iterrows():
-        # (這裡接續你原本的 expander 顯示邏輯...)
         title = f"🏢 [{row.get('轄區', '')}] {row.get('客戶簡稱', '無')} ({row.get('客戶代號', '')})"
         with st.expander(title):
-            # ...你的各欄位顯示區塊
-            pass 
-else:
-    st.info("查無資料，請嘗試其他搜尋條件。")
-
-# --- 顯示與維護 ---
-    for idx, row in display_results.iterrows():
-        # 設定 Expander 標題
-        title = f"🏢 [{row.get('轄區', '')}] {row.get('客戶簡稱', '無')} ({row.get('客戶代號', '')})"
-        
-        with st.expander(title):
-            # 1. 基本資料區 (使用兩欄佈局)
+            # 兩欄位佈局顯示資料
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown(f"**客戶全稱：** {row.get('客戶全稱', '')}")
@@ -98,28 +86,25 @@ else:
                 st.markdown(f"**手機：** {row.get('行動電話', '')}")
                 st.markdown(f"**地址：** {row.get('地址', '')}")
             
-            st.divider() # 分隔線
-            
-            # 2. 業務維護區
+            st.divider()
             st.subheader("📝 業務維護")
+            
+            # 輸入框
             new_count = st.text_input("拜訪次數", value=str(row.get('拜訪次數', '')), key=f"count_{idx}")
             new_record = st.text_input("拜訪紀錄", value=str(row.get('拜訪紀錄', '')), key=f"rec_{idx}")
             new_date = st.text_input("最近一次拜訪日期", value=str(row.get('最近一次拜訪日期', '')), key=f"date_{idx}")
             
-            # 3. 更新按鈕
+            # 更新按鈕
             if st.button("上傳至雲端", key=f"save_{idx}"):
                 try:
                     sheet = get_sheet()
                     target_row = df[df['客戶代號'] == str(row.get('客戶代號'))].index[0] + 2
-                    
-                    # 更新試算表對應欄位 (請再次確認 12, 13, 14 是對應你的拜訪次數/紀錄/日期欄)
                     sheet.update_cell(target_row, 12, new_count)
                     sheet.update_cell(target_row, 13, new_record)
                     sheet.update_cell(target_row, 14, new_date)
-                    
-                    st.success("✅ 資料已同步！")
+                    st.success("✅ 已同步！")
                     st.cache_data.clear()
                 except Exception as e:
                     st.error(f"同步失敗: {e}")
 else:
-    st.info("請輸入條件進行搜尋。")
+    st.info("查無資料，請嘗試其他搜尋條件。")
