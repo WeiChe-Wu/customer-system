@@ -12,7 +12,7 @@ def get_sheet():
     creds_dict = st.secrets["gcp_service_account"]
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"])
     client = gspread.authorize(creds)
-    return client.open("客戶名單雲端版").sheet1
+    return client.open("customer_list_cloud").sheet1
 
 # --- 改用按需載入 ---
 @st.cache_data(ttl=600)
