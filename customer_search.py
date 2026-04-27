@@ -61,18 +61,31 @@ else:
     # --- 顯示與維護 ---
     if not results.empty:
         st.write(f"找到 {len(results)} 筆相符資料")
-        for idx, row in results.iterrows():
-            with st.expander(f"🏢 [{row.get('轄區')}] {row['客戶簡稱']} ({row['客戶代號']})"):
-                # (顯示資料與維護欄位邏輯同前一版)
-                # ... [略] ...
-                if st.button("上傳至雲端", key=f"save_{idx}"):
+        for idx, row in display_results.iterrows():
+        # 強制將 row 轉換為字典格式，避免鍵值抓取錯誤
+        row_dict = row.to_dict()
+        
+        with st.expander(f"🏢 [{row_dict.get('轄區', '')}] {row_dict.get('客戶簡稱', '未命名')} ({row_dict.get('客戶代號', '')})"):
+            st.write(f"全稱：{row_dict.get('客戶全稱', '')}")
+            
+            # 使用 row_dict 讀取，並確保賦予預設值 (空字串)
+            new_count = st.text_input("拜訪次數", value=str(row_dict.get('拜訪次數', '')), key=f"count_{idx}")
+            new_record = st.text_input("拜訪紀錄", value=str(row_dict.get('拜訪紀錄', '')), key=f"rec_{idx}")
+            new_date = st.text_input("最近一次拜訪日期", value=str(row_dict.get('最近一次拜訪日期', '')), key=f"date_{idx}")
+            
+            if st.button("上傳至雲端", key=f"save_{idx}"):
+                try:
                     sheet = get_sheet()
-                    # 這裡找到原始行號 (重新計算 index)
-                    target_row = df[df['客戶代號'] == row['客戶代號']].index[0] + 2
-                    sheet.update_cell(target_row, 12, st.session_state[f"count_{idx}"])
-                    sheet.update_cell(target_row, 13, st.session_state[f"rec_{idx}"])
-                    sheet.update_cell(target_row, 14, st.session_state[f"date_{idx}"])
+                    # 重新計算行號
+                    target_row = df[df['客戶代號'] == str(row_dict['客戶代號'])].index[0] + 2
+                    
+                    # 執行寫入
+                    sheet.update_cell(target_row, 12, new_count)
+                    sheet.update_cell(target_row, 13, new_record)
+                    sheet.update_cell(target_row, 14, new_date)
+                    
                     st.success("✅ 已同步至 Google Sheets！")
-                    st.cache_data.clear() # 強制更新快取
+                except Exception as e:
+                    st.error(f"同步失敗: {e}")
     else:
         st.warning("查無相符資料。")
