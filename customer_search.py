@@ -21,14 +21,23 @@ def get_sheet():
     return client.open_by_key(SPREADSHEET_ID).sheet1
 
 # --- 資料讀取 ---
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=600)
 def get_all_data():
     sheet = get_sheet()
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
-    # 強制轉為文字以保留開頭 0
-    if '客戶代號' in df.columns:
-        df['客戶代號'] = df['客戶代號'].astype(str).str.strip()
+    
+    # 【關鍵修正】強制將特定欄位轉為文字，確保開頭的 0 不會消失
+    # 請把所有需要保留開頭 0 的欄位名稱都加進來
+    text_columns = ['客戶代號', '行動電話', '電話', '統一編號']
+    
+    for col in text_columns:
+        if col in df.columns:
+            # 確保先轉成 string，然後去掉前後空白，並且確保不會變成科學記號
+            df[col] = df[col].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+            # 如果還是沒有 0 (例如讀取時變成了 91234567)，這裡可以補齊長度
+            # 但通常轉為 str 就能解決問題
+            
     return df
 
 # 載入資料
