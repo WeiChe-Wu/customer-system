@@ -17,7 +17,7 @@ def get_sheet():
     )
     client = gspread.authorize(creds)
     # 【請填入你的試算表 ID】
-    SPREADSHEET_ID = "https://docs.google.com/spreadsheets/d/1r-nFgfVwVRZRNQ5LmvnonvMFHJTTFe1lwOYZ_F57N5M/edit?gid=0#gid=0"
+    SPREADSHEET_ID = "1r-nFgfVwVRZRNQ5LmvnonvMFHJTTFe1lwOYZ_F57N5M"
     return client.open_by_key(SPREADSHEET_ID).sheet1
 
 # --- 資料讀取 ---
