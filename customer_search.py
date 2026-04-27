@@ -61,8 +61,9 @@ else:
     # --- 顯示與維護 ---
     if not results.empty:
         st.write(f"找到 {len(results)} 筆相符資料")
-        for idx, row in display_results.iterrows():
-        # 強制將 row 轉換為字典格式，避免鍵值抓取錯誤
+    # 搜尋結果迴圈
+    for idx, row in display_results.iterrows():
+        # 確保這些行都有往右縮排 (這是關鍵！)
         row_dict = row.to_dict()
         
         with st.expander(f"🏢 [{row_dict.get('轄區', '')}] {row_dict.get('客戶簡稱', '未命名')} ({row_dict.get('客戶代號', '')})"):
@@ -76,8 +77,8 @@ else:
             if st.button("上傳至雲端", key=f"save_{idx}"):
                 try:
                     sheet = get_sheet()
-                    # 重新計算行號
-                    target_row = df[df['客戶代號'] == str(row_dict['客戶代號'])].index[0] + 2
+                    # 重新計算行號 (target_row)
+                    target_row = df[df['客戶代號'] == str(row_dict.get('客戶代號'))].index[0] + 2
                     
                     # 執行寫入
                     sheet.update_cell(target_row, 12, new_count)
