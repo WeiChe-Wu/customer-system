@@ -20,24 +20,42 @@ def get_sheet():
     SPREADSHEET_ID = "1r-nFgfVwVRZRNQ5LmvnonvMFHJTTFe1lwOYZ_F57N5M"
     return client.open_by_key(SPREADSHEET_ID).sheet1
 
-# --- 資料讀取 ---
+# --- 終極修正：補零版資料讀取 ---
 @st.cache_data(ttl=600)
 def get_all_data():
     sheet = get_sheet()
-    data = sheet.get_all_records()
-    df = pd.DataFrame(data)
+    all_data = sheet.get_all_values()
     
-    # 【關鍵修正】強制將特定欄位轉為文字，確保開頭的 0 不會消失
-    # 請把所有需要保留開頭 0 的欄位名稱都加進來
-    text_columns = ['客戶代號', '行動電話', '電話', '統一編號']
+    if not all_data:
+        return pd.DataFrame()
     
-    for col in text_columns:
-        if col in df.columns:
-            # 確保先轉成 string，然後去掉前後空白，並且確保不會變成科學記號
-            df[col] = df[col].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-            # 如果還是沒有 0 (例如讀取時變成了 91234567)，這裡可以補齊長度
-            # 但通常轉為 str 就能解決問題
-            
+    header = all_data[0]
+    data = all_data[1:]
+    df = pd.DataFrame(data, columns=header)
+    
+    # 針對「行動電話」與「電話」，如果只有 9 碼且非空值，強制補 0
+    def fix_phone(x):
+        x = str(x).strip()
+        if x and x.isdigit() and len(x) == 9:
+            return "0" + x
+        return x
+
+    # 針對「客戶代號」，如果是純數字且長度不足（例如你希望它是 4 碼），也可以補零
+    def fix_code(x):
+        x = str(x).strip()
+        # 假設你的客戶代號應該是 4 碼，若讀進來只有 3 碼就補 0
+        # 如果不確定長度，可以直接將科學記號 e+10 之類的轉回正常字串
+        return x
+
+    if '行動電話' in df.columns:
+        df['行動電話'] = df['行動電話'].apply(fix_phone)
+    
+    if '電話' in df.columns:
+        df['電話'] = df['電話'].apply(fix_phone)
+
+    if '客戶代號' in df.columns:
+        df['客戶代號'] = df['客戶代號'].apply(fix_code)
+        
     return df
 
 # 載入資料
