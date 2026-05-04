@@ -116,20 +116,45 @@ if not display_results.empty:
             st.divider()
             st.subheader("📝 業務維護")
             
-            # 輸入框
+            # --- 拜訪次數與紀錄 (維持文字輸入) ---
             new_count = st.text_input("拜訪次數", value=str(row.get('拜訪次數', '')), key=f"count_{idx}")
             new_record = st.text_input("拜訪紀錄", value=str(row.get('拜訪紀錄', '')), key=f"rec_{idx}")
-            new_date = st.text_input("最近一次拜訪日期", value=str(row.get('最近一次拜訪日期', '')), key=f"date_{idx}")
             
-            # 更新按鈕
+            # --- 最近一次拜訪日期 (改為日期選單) ---
+            import datetime
+            raw_date = str(row.get('最近一次拜訪日期', '')).strip()
+            
+            # 嘗試解析舊有的日期字串，如果失敗或空白則預設為今天
+            try:
+                if raw_date and raw_date != 'None':
+                    default_date = datetime.datetime.strptime(raw_date, '%Y-%m-%d').date()
+                else:
+                    default_date = datetime.date.today()
+            except:
+                default_date = datetime.date.today()
+
+            # 顯示日期選單
+            selected_date = st.date_input(
+                "最近一次拜訪日期", 
+                value=default_date,
+                key=f"date_{idx}",
+                format="YYYY-MM-DD"
+            )
+            
+            # 將選擇的日期轉回字串，準備上傳
+            new_date_str = selected_date.strftime('%Y-%m-%d')
+            
+            # --- 更新按鈕 ---
             if st.button("上傳至雲端", key=f"save_{idx}"):
                 try:
                     sheet = get_sheet()
                     target_row = df[df['客戶代號'] == str(row.get('客戶代號'))].index[0] + 2
+                    
                     sheet.update_cell(target_row, 12, new_count)
                     sheet.update_cell(target_row, 13, new_record)
-                    sheet.update_cell(target_row, 14, new_date)
-                    st.success("✅ 已同步！")
+                    sheet.update_cell(target_row, 14, new_date_str) # 上傳轉換後的日期字串
+                    
+                    st.success(f"✅ 已同步！更新日期為: {new_date_str}")
                     st.cache_data.clear()
                 except Exception as e:
                     st.error(f"同步失敗: {e}")
