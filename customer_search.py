@@ -108,6 +108,7 @@ if not display_results.empty:
                 st.markdown(f"**客戶全稱：** {row.get('客戶全稱', '')}")
                 st.markdown(f"**負責人：** {row.get('負責人', '')}")
                 st.markdown(f"**聯絡人：** {row.get('聯絡人', '')}")
+                st.markdown(f"**網路人數：** {row.get('網路人數', '')}")
             with col2:
                 st.markdown(f"**經營業務：** {row.get('經營業務', '')}")
                 st.markdown(f"**成交業務：** {row.get('成交業務', '')}")
