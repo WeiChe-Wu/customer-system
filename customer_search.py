@@ -73,13 +73,16 @@ selected_area = st.sidebar.selectbox("轄區：", area_list)
 if selected_area != "全部":
     temp_df = temp_df[temp_df['轄區'] == selected_area]
 
-# --- 搜尋邏輯 ---
-query = st.text_input("搜尋客戶 (代號/簡稱/全稱)：", placeholder="輸入關鍵字")
+# --- 搜尋邏輯 (新增地址關鍵字) ---
+query = st.text_input("搜尋客戶 (代號/簡稱/全稱/地址)：", placeholder="輸入關鍵字，例如：代號、路名或行政區")
+
 search_results = temp_df
 if query:
+    # 在這裡多增加了一行判斷：search_results['地址'].astype(str).str.contains(query, ...)
     mask = (search_results['客戶簡稱'].astype(str).str.contains(query, case=False) | 
             search_results['客戶全稱'].astype(str).str.contains(query, case=False) | 
-            search_results['客戶代號'].astype(str).str.contains(query, case=False))
+            search_results['客戶代號'].astype(str).str.contains(query, case=False) |
+            search_results['地址'].astype(str).str.contains(query, case=False)) # 新增地址搜尋
     search_results = search_results[mask]
 
 display_results = search_results.head(50)
