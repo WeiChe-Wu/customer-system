@@ -114,6 +114,7 @@ if not display_results.empty:
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown(f"**客戶代號：** {row.get('客戶代號', '')}")
+                st.markdown(f"**電話：** {row.get('電話', '')}")
                 st.markdown(f"**行動電話：** {row.get('行動電話', '')}")
                 st.markdown(f"**客戶全稱：** {row.get('客戶全稱', '')}")
                 st.markdown(f"**負責人：** {row.get('負責人', '')}")
