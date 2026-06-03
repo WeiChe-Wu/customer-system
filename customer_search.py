@@ -21,11 +21,10 @@ def get_sheet():
     SPREADSHEET_ID = "1r-nFgfVwVRZRNQ5LmvnonvMFHJTTFe1lwOYZ_F57N5M" 
     return client.open_by_key(SPREADSHEET_ID).sheet1
 
-# --- 資料讀取 (含補0邏輯) ---
+# --- 資料讀取 (含手機、統編補0邏輯) ---
 @st.cache_data(ttl=60)
 def get_all_data():
     sheet = get_sheet()
-    # 使用 get_all_values 避免 gspread 自動將 09 開頭轉為數字
     all_data = sheet.get_all_values()
     if not all_data:
         return pd.DataFrame()
@@ -34,10 +33,17 @@ def get_all_data():
     data = all_data[1:]
     df = pd.DataFrame(data, columns=header)
     
-    # 【補0功能】針對行動電話與電話，若只有 9 碼且為數字，自動補 0
+    # 【手機補0功能】若只有 9 碼且為數字，自動補 0
     def fix_phone(x):
         x = str(x).strip()
         if x and x.isdigit() and len(x) == 9:
+            return "0" + x
+        return x
+
+    # 【統編補0功能】台灣統編固定為 8 碼，若讀進來只有 7 碼且為數字，自動補 0
+    def fix_tax_id(x):
+        x = str(x).strip()
+        if x and x.isdigit() and len(x) == 7:
             return "0" + x
         return x
 
@@ -45,8 +51,12 @@ def get_all_data():
         df['行動電話'] = df['行動電話'].apply(fix_phone)
     if '電話' in df.columns:
         df['電話'] = df['電話'].apply(fix_phone)
+        
+    # 這裡加入對「統一編號」欄位的補零檢查
+    if '統一編號' in df.columns:
+        df['統一編號'] = df['統一編號'].apply(fix_tax_id)
+        
     if '客戶代號' in df.columns:
-        # 客戶代號視需求補0，若不確定長度則維持現狀
         df['客戶代號'] = df['客戶代號'].astype(str).str.strip()
         
     return df
