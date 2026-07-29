@@ -74,6 +74,10 @@ if df.empty or '經營業務' not in df.columns:
 if 'all_expanded' not in st.session_state:
     st.session_state.all_expanded = False
 
+# 【搜尋歷史】記住本次瀏覽器連線期間搜尋過的關鍵字，方便快速再查一次
+if 'search_history' not in st.session_state:
+    st.session_state.search_history = []
+
 # --- 側邊欄篩選 ---
 st.sidebar.header("🎯 篩選面板")
 sales_list = ["全部"] + sorted([s for s in df['經營業務'].unique() if s])
@@ -90,7 +94,35 @@ if selected_area != "全部":
     temp_df = temp_df[temp_df['轄區'] == selected_area]
 
 # --- 搜尋邏輯 (含地址關鍵字) ---
-query = st.text_input("搜尋客戶 (代號/簡稱/全稱/地址)：", placeholder="輸入關鍵字，例如：代號、路名或行政區")
+query = st.text_input(
+    "搜尋客戶 (代號/簡稱/全稱/地址)：",
+    placeholder="輸入關鍵字，例如：代號、路名或行政區",
+    key="search_query",
+)
+
+# 【搜尋歷史顯示】點擊即可快速重新查詢，並可一鍵清除
+if st.session_state.search_history:
+    hist_col, clear_col = st.columns([10, 1])
+    with hist_col:
+        st.caption("🕘 最近搜尋：")
+        chip_cols = st.columns(len(st.session_state.search_history))
+        for i, term in enumerate(st.session_state.search_history):
+            with chip_cols[i]:
+                if st.button(term, key=f"hist_{i}"):
+                    st.session_state.search_query = term
+                    st.rerun()
+    with clear_col:
+        if st.button("🗑️", key="clear_history", help="清除搜尋紀錄"):
+            st.session_state.search_history = []
+            st.rerun()
+
+# 將本次有效搜尋加入歷史紀錄（去重、最多保留 8 筆、最新的排最前面）
+if query:
+    history = st.session_state.search_history
+    if query in history:
+        history.remove(query)
+    history.insert(0, query)
+    st.session_state.search_history = history[:8]
 
 search_results = temp_df
 if query:
