@@ -6,7 +6,7 @@ import datetime
 
 # --- 網頁設定 ---
 st.set_page_config(page_title="北營業務客戶維護系統", layout="wide")
-st.title("☁️ 雲端客戶資料維護系統")
+st.title("☁️ 雲端老客戶拜訪名單維護系統")
 
 # --- 雲端連線設定 ---
 @st.cache_resource
