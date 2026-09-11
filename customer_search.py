@@ -3,6 +3,8 @@ import gspread
 import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
 import datetime
+import urllib.parse
+import html
 
 # --- 網頁設定 ---
 st.set_page_config(page_title="北營業務客戶維護系統", layout="wide")
@@ -210,7 +212,18 @@ if not display_results.empty:
                 st.markdown(f"**成交業務：** {row.get('成交業務', '')}")
                 st.markdown(f"**行業別：** {row.get('行業別', '')}")
                 st.markdown(f"**統編：** {row.get('統一編號', '')}")
-                st.markdown(f"**地址：** {row.get('地址', '')}")
+
+                # 【地址改為 Google Map 連結】點擊直接開新分頁導向 Google Map 搜尋該地址，
+                # 不需要再手動複製地址文字貼過去
+                address = str(row.get('地址', '')).strip()
+                if address:
+                    maps_url = "https://www.google.com/maps/search/?api=1&query=" + urllib.parse.quote(address)
+                    st.markdown(
+                        f"**地址：** <a href='{maps_url}' target='_blank'>📍 {html.escape(address)}</a>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown("**地址：** ")
 
             st.divider()
             st.subheader("📜 歷史拜訪紀錄")
