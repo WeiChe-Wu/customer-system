@@ -6,7 +6,7 @@ import datetime
 
 # --- 網頁設定 ---
 st.set_page_config(page_title="北營業務客戶維護系統", layout="wide")
-st.title("☁️ 雲端老客戶拜訪名單維護系統")
+st.title("☁️ 雲端客戶資料維護系統")
 
 # --- 雲端連線設定 ---
 @st.cache_resource
@@ -20,6 +20,31 @@ def get_sheet():
     # 【請確保填入正確的 SPREADSHEET_ID】
     SPREADSHEET_ID = "1r-nFgfVwVRZRNQ5LmvnonvMFHJTTFe1lwOYZ_F57N5M"
     return client.open_by_key(SPREADSHEET_ID).sheet1
+
+
+# 歷史拜訪紀錄存放在同一份試算表的另一個分頁，採「累加式」寫入，
+# 每次上傳只會新增一列，不會覆蓋掉之前的紀錄。
+LOG_SHEET_NAME = "拜訪紀錄日誌"
+LOG_HEADER = ["客戶代號", "客戶簡稱", "拜訪日期", "拜訪紀錄"]
+
+
+@st.cache_resource
+def get_log_sheet():
+    creds_dict = st.secrets["gcp_service_account"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        creds_dict,
+        ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    )
+    client = gspread.authorize(creds)
+    SPREADSHEET_ID = "1r-nFgfVwVRZRNQ5LmvnonvMFHJTTFe1lwOYZ_F57N5M"
+    spreadsheet = client.open_by_key(SPREADSHEET_ID)
+    try:
+        return spreadsheet.worksheet(LOG_SHEET_NAME)
+    except gspread.exceptions.WorksheetNotFound:
+        # 分頁不存在就自動建立，並寫入表頭，避免每個人都要手動先建立
+        log_ws = spreadsheet.add_worksheet(title=LOG_SHEET_NAME, rows=2000, cols=len(LOG_HEADER))
+        log_ws.append_row(LOG_HEADER, value_input_option="RAW")
+        return log_ws
 
 
 # --- 通用補零函式 ---
@@ -62,8 +87,24 @@ def get_all_data():
     return df
 
 
+# --- 歷史拜訪紀錄讀取 ---
+@st.cache_data(ttl=60)
+def get_log_data():
+    log_sheet = get_log_sheet()
+    all_data = log_sheet.get_all_values()
+    if not all_data or len(all_data) < 1:
+        return pd.DataFrame(columns=LOG_HEADER)
+    header = all_data[0]
+    data = all_data[1:]
+    log_df = pd.DataFrame(data, columns=header)
+    if "客戶代號" in log_df.columns:
+        log_df["客戶代號"] = log_df["客戶代號"].astype(str).str.strip()
+    return log_df
+
+
 # 載入資料
 df = get_all_data()
+log_df = get_log_data()
 
 # 【讀取防呆】連線失敗或欄位異常時，顯示友善訊息並中止，避免同仁看到原始錯誤訊息
 if df.empty or '經營業務' not in df.columns:
@@ -172,7 +213,20 @@ if not display_results.empty:
                 st.markdown(f"**地址：** {row.get('地址', '')}")
 
             st.divider()
-            st.subheader("📝 業務維護")
+            st.subheader("📜 歷史拜訪紀錄")
+
+            # 顯示該客戶所有過去的拜訪紀錄（依日期新到舊排序），採唯讀方式呈現
+            customer_key = str(row.get('客戶代號', ''))
+            customer_logs = log_df[log_df['客戶代號'] == customer_key] if not log_df.empty else pd.DataFrame()
+            if not customer_logs.empty:
+                customer_logs = customer_logs.sort_values('拜訪日期', ascending=False)
+                for _, log_row in customer_logs.iterrows():
+                    st.markdown(f"- 🗓️ **{log_row.get('拜訪日期', '')}**：{log_row.get('拜訪紀錄', '')}")
+            else:
+                st.caption("尚無歷史拜訪紀錄（此功能上線後才開始累積，之前的紀錄僅能看到「最新一筆」）")
+
+            st.divider()
+            st.subheader("📝 業務維護（更新後將自動加入歷史紀錄）")
 
             # 2. 維護欄位
             new_count = st.text_input("拜訪次數", value=str(row.get('拜訪次數', '')), key=f"count_{idx}")
@@ -216,6 +270,15 @@ if not display_results.empty:
                     sheet.update_cell(target_row, col_idx('拜訪次數', sheet_header), new_count)
                     sheet.update_cell(target_row, col_idx('拜訪紀錄', sheet_header), new_record)
                     sheet.update_cell(target_row, col_idx('最近一次拜訪日期', sheet_header), new_date_str)
+
+                    # 【歷史紀錄】只要有填寫拜訪紀錄，就額外累加一筆到歷史紀錄分頁，
+                    # 不會覆蓋既有內容，之後每次更新都查得到完整歷程
+                    if new_record.strip():
+                        log_sheet = get_log_sheet()
+                        log_sheet.append_row(
+                            [str(row['客戶代號']), row.get('客戶簡稱', ''), new_date_str, new_record],
+                            value_input_option="RAW",
+                        )
 
                     st.success(f"✅ 更新成功！日期：{new_date_str}")
                     st.cache_data.clear()
